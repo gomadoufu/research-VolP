@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
       - name: Build PDF file
-        run: latexmk -pdf && latexmk -c && mkdir -p docs && cp *.pdf ./docs/
+        run: latexmk && latexmk -c && mkdir -p docs && cp *.pdf ./docs/
       - name: Deploy pages
         uses: peaceiris/actions-gh-pages@v3
         with:
