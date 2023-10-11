@@ -1,6 +1,6 @@
 %%
 %% 研究報告用スイッチ
-%% [techrep]
+% [techrep]
 %%
 %% 欧文表記無しのスイッチ(etitle,eabstractは任意)
 %% [noauthor]
@@ -27,29 +27,23 @@
 \begin{document}
 
 
-\title{情報処理学会研究報告の準備方法\\
-（2018年10月29日版）}
+\title{空間音声ラベルプリンタ：非同期の音声コミュニケーション促進を実現する小型印刷機を備えたIoTノード}
 
-\etitle{How to Prepare Your Paper for IPSJ SIG Technical Report \\ (version 2018/10/29)}
+% \etitle{How to Prepare Your Paper for IPSJ SIG Technical Report \\ (version 2018/10/29)}
 
-\affiliate{IPSJ}{情報処理学会\\
-IPSJ, Chiyoda, Tokyo 101--0062, Japan}
+\affiliate{TDU}{東京電機大学}
 
 
-\paffiliate{JU}{情報処理大学\\
-Johoshori Uniersity}
+% \paffiliate{JU}{情報処理大学\\
+% Johoshori Uniersity}
 
-\author{情報 太郎}{Joho Taro}{IPSJ}[joho.taro@ipsj.or.jp]
-\author{処理 花子}{Shori Hanako}{IPSJ}
-\author{学会 次郎}{Gakkai Jiro}{IPSJ,JU}[gakkai.jiro@ipsj.or.jp]
+\author{橋本 慶紀}{Hashimoto Yoshiki}{TDU}[yoshiki@cps.im.dendai.ac.jp]
+\author{岩井 将行}{Iwai Masayuki}{TDU}[iwai@cps.im.dendai.ac.jp]
+% \author{学会 次郎}{Gakkai Jiro}{IPSJ,JU}[gakkai.jiro@ipsj.or.jp]
 
 \begin{abstract}
-本稿は，情報処理学会研究報告に投稿する原稿を執筆する際の注意点等をまとめたものである．
-\LaTeX と専用のスタイルファイルを用いた場合の論文フォーマットに関する指針，
-および論文の内容に関してするべきこと，
-するべきでないことをまとめたべからずチェックリストからなる．
-本稿自体も\LaTeX と専用のスタイルファイルを用いて執筆されているため，
-論文執筆の際に参考になれば幸いである．
+近年、スマートフォンなどでのボイスメッセージの利用が広がりを見せている。音声にはテキストではできない表現が可能なことが、その理由のひとつだ。一方で、ボイスメッセージをはじめとする非同期音声コミュニケーションには、デジタルディバイドの問題がある。つまり、デジタル機器を利用していなかったり、利用が難しい人は、非同期音声コミュニケーションが効果的と思われる場面であっても、音声コミュニケーションの対象がその場にいる人に限定されてしまう。たとえば幼い子供がいる家庭や高齢者施設など、音声のもつ息遣いや抑揚の情報がコミュニケーションに効果的に作用すると思われる場所は多くある。しかしこれらの場所で、非同期音声コミュニケーションは十分活用されていない。
+この問題を解決するために、著者らは、クラウド上に録音メッセージをアップロードし、そのデータへのアクセスを紙に印刷したQRコードで提供するシステム「空間音声ラベルプリンタ」を考案した。本システムを用いることで、専用アプリケーションの利用や会員登録などの複雑な操作なしに、直感的かつ簡単に非同期音声コミュニケーションを利用することができる。本稿では、上記システムの実装および、使用シナリオとして、ラベルをボードに複数貼り付ける場合と、物体それぞれに貼り付ける場合について検討した結果を述べる。本空間音声ラベルプリンタにより、非同期の音声コミュニケーションの応用範囲が広がることが期待できる。
 \end{abstract}
 
 
