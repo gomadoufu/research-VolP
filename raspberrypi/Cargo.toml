@@ -1,0 +1,18 @@
+[package]
+name = "cargo-template"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.75"
+chrono = "0.4.31"
+clap = { version = "4.0", features = ["derive"] }
+cpal = { version = "0.15.2", features = ["asio", "asio-sys", "jack"] }
+hound = "3.5.1"
+reqwest = { version = "0.11.2", features = ["json", "multipart"] }
+serde = { version = "1.0.189", features = ["derive"] }
+serde_json = "1.0.107"
+tokio = { version = "1.33.0", features = ["full"] }
+yup-oauth2 = "8.3.0"
