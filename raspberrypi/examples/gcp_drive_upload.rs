@@ -17,14 +17,13 @@ async fn main() -> Result<()> {
 
     let metadata = json!(
         {
-            "name": "sample.wav",
+            "name": "recorded.wav",
             "mimeType": "audio/wav",
             "parents": ["1mCkwwOKMaNWwbKEjXY7H8_Nlfsh-Eb3i"],
-            "samplingRateHertz": 44100,
         }
     );
 
-    let file_path = "./sound/sample.wav";
+    let file_path = "./sound/recorded.wav";
 
     let form = reqwest::multipart::Form::new()
         .part(
