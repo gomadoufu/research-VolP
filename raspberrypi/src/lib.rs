@@ -2,10 +2,14 @@ use anyhow::{Ok, Result};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{FromSample, Sample};
 use reqwest::Response;
+use rumqttc::{self, Key, Publish, QoS, TlsConfiguration, Transport};
+use rumqttc::{AsyncClient, MqttOptions};
 use serde_json::json;
 use std::fs::File;
 use std::io::BufWriter;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use tokio::{task, time};
 use yup_oauth2::{read_service_account_key, AccessToken, ServiceAccountAuthenticator};
 
 pub fn record_file(file_name: &str, spec: hound::WavSpec) -> Result<()> {
@@ -159,4 +163,52 @@ pub async fn get_shared_link(response: Response) -> Result<String> {
 
     let shared_link = format!("https://drive.google.com/uc?id={}", file_id);
     Ok(shared_link)
+}
+
+pub async fn mqtt_pub(shared_link: &str) -> Result<()> {
+    let shared_link = shared_link.to_string();
+    let mut mqttoptions = MqttOptions::new(
+        "RaspberryPiZeroW",
+        "a9waffd1xx04o-ats.iot.ap-northeast-1.amazonaws.com",
+        8883,
+    );
+    mqttoptions.set_keep_alive(Duration::from_secs(5));
+
+    // Dummies to prevent compilation error in CI
+    let ca = include_bytes!("../certs/AmazonRootCA1.pem");
+    let client_cert = include_bytes!("../certs/certificate.pem.crt");
+    let client_key = include_bytes!("../certs/private.pem.key");
+
+    let transport = Transport::Tls(TlsConfiguration::Simple {
+        ca: ca.to_vec(),
+        alpn: None,
+        client_auth: Some((client_cert.to_vec(), Key::RSA(client_key.to_vec()))),
+    });
+
+    mqttoptions.set_transport(transport);
+
+    let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
+
+    task::spawn(async move {
+        client
+            .publish(
+                "volp/share/link",
+                QoS::AtMostOnce,
+                false,
+                format!("{{ \"link\": \"{}\"}}", shared_link),
+            )
+            .await
+            .unwrap();
+        time::sleep(Duration::from_secs(10)).await;
+    });
+
+    loop {
+        let notification = eventloop.poll().await;
+        if let core::result::Result::Ok(rumqttc::Event::Outgoing(rumqttc::Outgoing::Publish(_))) =
+            notification
+        {
+            break;
+        }
+    }
+    Ok(())
 }

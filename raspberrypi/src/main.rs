@@ -1,7 +1,9 @@
 use anyhow::{Ok, Result};
 use chrono::Local;
 use reqwest::Response;
-use volp_raspberrypi::{gcp_auth, get_shared_link, record_file, upload_file, RequiredFields};
+use volp_raspberrypi::{
+    gcp_auth, get_shared_link, mqtt_pub, record_file, upload_file, RequiredFields,
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -14,6 +16,8 @@ async fn main() -> Result<()> {
     let shared_link = get_shared_link(response).await?;
 
     println!("Shared link: {}", shared_link);
+
+    mqtt_pub(shared_link.as_str()).await?;
 
     Ok(())
 }
