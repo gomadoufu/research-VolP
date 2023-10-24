@@ -15,7 +15,9 @@ use yup_oauth2::{read_service_account_key, AccessToken, ServiceAccountAuthentica
 pub fn record_and_create(file_name: &str, spec: hound::WavSpec) -> Result<()> {
     let host = cpal::default_host();
 
-    let device = host.default_input_device().unwrap();
+    let device = host
+        .default_input_device()
+        .ok_or_else(|| anyhow::anyhow!("Failed to get default input device"))?;
 
     let config = device
         .default_input_config()
@@ -93,17 +95,12 @@ impl RequiredFields {
 }
 
 pub async fn gcp_auth() -> Result<AccessToken> {
-    let creds = read_service_account_key("./auth/service_account.json")
-        .await
-        .unwrap();
-    let auth = ServiceAccountAuthenticator::builder(creds)
-        .build()
-        .await
-        .unwrap();
+    let creds = read_service_account_key("./auth/service_account.json").await?;
+    let auth = ServiceAccountAuthenticator::builder(creds).build().await?;
 
     let scopes = &["https://www.googleapis.com/auth/drive.file"];
 
-    let token = auth.token(scopes).await.unwrap();
+    let token = auth.token(scopes).await?;
     Ok(token)
 }
 
@@ -122,14 +119,12 @@ pub async fn upload_file(required_fields: RequiredFields, token: AccessToken) ->
         .part(
             "metadata",
             reqwest::multipart::Part::text(serde_json::to_string(&metadata)?)
-                .mime_str("application/json;charset=UTF-8")
-                .unwrap(),
+                .mime_str("application/json;charset=UTF-8")?,
         )
         .part(
             "file",
             reqwest::multipart::Part::bytes(std::fs::read(file_path)?)
-                .mime_str(required_fields.mime_type.as_str())
-                .unwrap(),
+                .mime_str(required_fields.mime_type.as_str())?,
         );
 
     let client = reqwest::Client::new();
@@ -153,9 +148,9 @@ pub async fn share_file(response: Response) -> Result<SharedLink> {
 
     let file_id = response_value
         .get("id")
-        .unwrap()
+        .ok_or_else(|| anyhow::anyhow!("Failed to get file id"))?
         .as_str()
-        .unwrap()
+        .ok_or_else(|| anyhow::anyhow!("Failed to convert &Value(file id) into &str"))?
         .trim_matches('"');
 
     let shared_link = format!("https://drive.google.com/uc?id={}", file_id);
@@ -193,7 +188,7 @@ pub async fn mqtt_pub(url: SharedLink) -> Result<()> {
                 format!("{{ \"link\": \"{}\"}}", url),
             )
             .await
-            .unwrap();
+            .expect("Failed to publish message");
         time::sleep(Duration::from_secs(10)).await;
     });
 
