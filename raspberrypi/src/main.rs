@@ -2,28 +2,37 @@ use anyhow::{Ok, Result};
 use chrono::Local;
 use reqwest::Response;
 use volp_raspberrypi::{
-    gcp_auth, get_shared_link, mqtt_pub, record_file, upload_file, RequiredFields,
+    gcp_auth, mqtt_pub, record_and_create, share_file, upload_file, RequiredFields, SharedLink,
 };
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // 現在時刻でファイル名を作成
-    let now = Local::now();
-    let file_name = now.format("%Y-%m-%d-%H-%M-%S.wav").to_string();
-    record(file_name.as_str())?;
+    loop {
+        // 今の時間を取得して、ファイル名にする
+        let now = Local::now();
+        let file_name: String = now.format("%Y-%m-%d-%H-%M-%S.wav").to_string();
 
-    let response = upload(file_name.as_str()).await?;
-    let shared_link = get_shared_link(response).await?;
+        // 録音して、ファイルを作成する
+        record(file_name.as_str())?;
 
-    println!("Shared link: {}", shared_link);
+        // ファイルをアップロードする
+        let response: Response = upload(file_name.as_str()).await?;
 
-    mqtt_pub(shared_link.as_str()).await?;
+        println!("{:#?}", response);
 
-    Ok(())
+        // 共有リンクを取得する
+        let shared_link: SharedLink = share_file(response).await?;
+
+        println!("Shared link: {}", shared_link);
+
+        // MQTTで共有リンクを送信する
+        mqtt_pub(shared_link).await?;
+    }
 }
 
 fn record(file_name: &str) -> Result<()> {
     // 出力するWAVファイルの設定
+    // Int16じゃないと、Drive側で再生できない
     // 入力は自動で設定される
     let spec = hound::WavSpec {
         channels: 1,
@@ -32,26 +41,26 @@ fn record(file_name: &str) -> Result<()> {
         sample_format: hound::SampleFormat::Int,
     };
 
-    record_file(file_name, spec)?;
+    record_and_create(file_name, spec)?;
     Ok(())
 }
 
 async fn upload(file_name: &str) -> Result<Response> {
     let token = gcp_auth().await?;
-    const PARENT_ID: &str = "1mCkwwOKMaNWwbKEjXY7H8_Nlfsh-Eb3i";
+    let parent_id: &str = include_str!("../secrets/parent_id").trim_end_matches('\n');
     const MIME_TYPE: &str = "audio/wav";
     const UPLOAD_URL: &str = "https://www.googleapis.com/upload/drive/v3/files";
 
     let required_fields = RequiredFields::new(
         file_name.to_string(),
-        PARENT_ID.to_string(),
+        parent_id.to_string(),
         MIME_TYPE.to_string(),
         UPLOAD_URL.to_string(),
     );
 
-    let response = upload_file(required_fields, token).await?;
+    println!("{:#?}", required_fields);
 
-    println!("File uploaded successfully!");
+    let response = upload_file(required_fields, token).await?;
 
     Ok(response)
 }

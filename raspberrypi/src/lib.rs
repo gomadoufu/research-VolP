@@ -2,7 +2,7 @@ use anyhow::{Ok, Result};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{FromSample, Sample};
 use reqwest::Response;
-use rumqttc::{self, Key, Publish, QoS, TlsConfiguration, Transport};
+use rumqttc::{self, Key, QoS, TlsConfiguration, Transport};
 use rumqttc::{AsyncClient, MqttOptions};
 use serde_json::json;
 use std::fs::File;
@@ -12,7 +12,7 @@ use std::time::Duration;
 use tokio::{task, time};
 use yup_oauth2::{read_service_account_key, AccessToken, ServiceAccountAuthenticator};
 
-pub fn record_file(file_name: &str, spec: hound::WavSpec) -> Result<()> {
+pub fn record_and_create(file_name: &str, spec: hound::WavSpec) -> Result<()> {
     let host = cpal::default_host();
 
     let device = host.default_input_device().unwrap();
@@ -68,6 +68,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct RequiredFields {
     pub file_name: String,
     pub parent_id: String,
@@ -91,8 +92,6 @@ impl RequiredFields {
     }
 }
 
-/// get auth
-/// auth -> token
 pub async fn gcp_auth() -> Result<AccessToken> {
     let creds = read_service_account_key("./auth/service_account.json")
         .await
@@ -108,8 +107,6 @@ pub async fn gcp_auth() -> Result<AccessToken> {
     Ok(token)
 }
 
-/// upload file
-/// required_fields, token -> response
 pub async fn upload_file(required_fields: RequiredFields, token: AccessToken) -> Result<Response> {
     let metadata = json!(
         {
@@ -148,9 +145,9 @@ pub async fn upload_file(required_fields: RequiredFields, token: AccessToken) ->
     Ok(response)
 }
 
-/// get shared link
-/// response -> shared_link
-pub async fn get_shared_link(response: Response) -> Result<String> {
+pub type SharedLink = String;
+
+pub async fn share_file(response: Response) -> Result<SharedLink> {
     let response = response.text().await?;
     let response_value = serde_json::from_str::<serde_json::Value>(response.as_str()).unwrap();
 
@@ -165,29 +162,27 @@ pub async fn get_shared_link(response: Response) -> Result<String> {
     Ok(shared_link)
 }
 
-pub async fn mqtt_pub(shared_link: &str) -> Result<()> {
-    let shared_link = shared_link.to_string();
-    let mut mqttoptions = MqttOptions::new(
-        "RaspberryPiZeroW",
-        "a9waffd1xx04o-ats.iot.ap-northeast-1.amazonaws.com",
+pub async fn mqtt_pub(url: SharedLink) -> Result<()> {
+    let mut mqtt_options = MqttOptions::new(
+        include_str!("../secrets/thing_name").trim_end_matches('\n'),
+        include_str!("../secrets/aws_endpoint").trim_end_matches('\n'),
         8883,
     );
-    mqttoptions.set_keep_alive(Duration::from_secs(5));
+    mqtt_options.set_keep_alive(Duration::from_secs(5));
 
-    // Dummies to prevent compilation error in CI
     let ca = include_bytes!("../certs/AmazonRootCA1.pem");
-    let client_cert = include_bytes!("../certs/certificate.pem.crt");
-    let client_key = include_bytes!("../certs/private.pem.key");
+    let cert = include_bytes!("../certs/certificate.pem.crt");
+    let key = include_bytes!("../certs/private.pem.key");
 
     let transport = Transport::Tls(TlsConfiguration::Simple {
         ca: ca.to_vec(),
         alpn: None,
-        client_auth: Some((client_cert.to_vec(), Key::RSA(client_key.to_vec()))),
+        client_auth: Some((cert.to_vec(), Key::RSA(key.to_vec()))),
     });
 
-    mqttoptions.set_transport(transport);
+    mqtt_options.set_transport(transport);
 
-    let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
+    let (client, mut eventloop) = AsyncClient::new(mqtt_options, 5);
 
     task::spawn(async move {
         client
@@ -195,7 +190,7 @@ pub async fn mqtt_pub(shared_link: &str) -> Result<()> {
                 "volp/share/link",
                 QoS::AtMostOnce,
                 false,
-                format!("{{ \"link\": \"{}\"}}", shared_link),
+                format!("{{ \"link\": \"{}\"}}", url),
             )
             .await
             .unwrap();
