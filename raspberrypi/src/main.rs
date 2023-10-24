@@ -7,27 +7,27 @@ use volp_raspberrypi::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    loop {
-        // 今の時間を取得して、ファイル名にする
-        let now = Local::now();
-        let file_name: String = now.format("%Y-%m-%d-%H-%M-%S.wav").to_string();
+    // 今の時間を取得して、ファイル名にする
+    let now = Local::now();
+    let file_name: String = now.format("%Y-%m-%d-%H-%M-%S.wav").to_string();
 
-        // 録音して、ファイルを作成する
-        record(file_name.as_str())?;
+    // 録音して、ファイルを作成する
+    record(file_name.as_str())?;
 
-        // ファイルをアップロードする
-        let response: Response = upload(file_name.as_str()).await?;
+    // ファイルをアップロードする
+    let response: Response = upload(file_name.as_str()).await?;
 
-        println!("{:#?}", response);
+    println!("{:#?}", response);
 
-        // 共有リンクを取得する
-        let shared_link: SharedLink = share_file(response).await?;
+    // 共有リンクを取得する
+    let shared_link: SharedLink = share_file(response).await?;
 
-        println!("Shared link: {}", shared_link);
+    println!("Shared link: {}", shared_link);
 
-        // MQTTで共有リンクを送信する
-        mqtt_pub(shared_link).await?;
-    }
+    // MQTTで共有リンクを送信する
+    mqtt_pub(shared_link).await?;
+
+    Ok(())
 }
 
 fn record(file_name: &str) -> Result<()> {
