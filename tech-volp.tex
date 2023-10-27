@@ -108,7 +108,7 @@ QRコードを利用した研究はいくつかある。たとえば古本らは
 本稿で提案するIoTノードVoLPは、録音データへのアクセスを印刷したQRコードとして提供することで、すべての人が直感的かつ簡単に、非同期音声コミュニケーションを活用できるようになることを目的とする。この提案手法全体の概要図を\figref{fig:sys-overview}に示す。\par
 
 \begin{figure}[tb]
-\includegraphics[scale=0.15,bb= 0 0 2000 1000]{./image/overview_drawio.png}
+\includegraphics[scale=0.15,bb= 0 0 2000 1000]{image/system_drawio.png}
 \caption{提案手法の概要図}
 \label{fig:sys-overview}
 \end{figure}
@@ -160,7 +160,7 @@ QRコードを利用した研究はいくつかある。たとえば古本らは
 \hbox to\hsize{\hfil
 \begin{tabular}{l|l}\hline\hline
 送信機 &	受信機 \\\hline
-MCU & MCU \\
+MCU/MPU & MCU/MPU \\
 マイクロフォン &	プリンター \\\hline
 \end{tabular}\hfil}
 \end{table}
@@ -173,16 +173,55 @@ MCU & MCU \\
     \item 非同期コミュニケーションの場所的な自由度を高めるため、据え置き型のプリンターではなく感熱プリンターを採用
 \end{itemize}
 \subsection{概要}
-本稿で提案するIoTノードVoLPは、録音データへのアクセスを印刷したQRコードとして提供することで、すべての人が直感的かつ簡単に、非同期音声コミュニケーションを活用できるようになることを目的とする。この提案手法全体の概要図を\figref{fig:proto-overview}に示す。\par
+試作するにあたり、\figref{fig:sys-overview}をもとに具体的なノードの構成や使用するハードウェア、通信インタフェースを決定した。試作の概要図を\figref{fig:proto-overview}に示す。なお、スピーカーの図柄は音声データを,
+図中の@は音声データのURLを示す.
 \begin{figure}[tb]
-\includegraphics[scale=0.15,bb= 0 0 2000 1000]{./image/overview_drawio.png}
-\caption{提案手法の概要図}
-\label{fig:sys-overview}
+\includegraphics[scale=0.2,bb= 0 0 2000 1000]{image/proto_drawio.png}
+\caption{試作物の概要図}
+\label{fig:proto-overview}
 \end{figure}
 
 \subsection{ハードウェア}
+試作物の送信機・受信機それぞれを構成するハードウェアの一覧を、\tabref{tab:proto-hardwares}に示す
+
+\begin{table}[tb] 
+\caption{試作物のハードウェア一覧} 
+\label{tab:proto-hardwares}
+\hbox to\hsize{\hfil
+\begin{tabular}{l|l}\hline\hline
+名称 & 用途 \\\hline
+マイクロフォン  & 集音\\
+RaspberryPi Zero W  & マクロフォンの駆動, データの送信\\
+M5 ATOM Lite  & プリンターの駆動, データの受信\\
+プリンター  & QRコードの印刷\\
+\end{tabular}\hfil}
+\end{table}
 
 \subsection{通信インタフェース}
+試作にあたり、通信インタフェースを具体的に定義した。それらを\tabref{tab:proto-communication}にまとめる。また、表中にあるGoogleAPIは
+\begin{quote}
+    https://www.googleapis.com\\/upload/drive/v3/files
+\end{quote}であり、アップロードへのレスポンスに含まれるJSON1の定義は\begin{quote}
+    \{"kind":"drive\#file","id":"FILEID", "name":"FILENAME","mimeType":"MIMETYPE"\}
+\end{quote},JSON2の定義は\begin{quote}
+    \{ "link":"\$SHAREDLINK"\}
+\end{quote}である。
+
+\begin{table}[tb] 
+\caption{試作物の通信インタフェース} 
+\label{tab:proto-communication}
+\hbox to\hsize{\hfil
+\begin{tabular}{l|l|l|l}\hline\hline
+用途 & プロトコル & URIなど & ペイロード\\\hline
+録音 & USB & --- & WAV(F32)\\
+音声アップロード & HTTP & GoogleAPI & WAV(I16)\\
+レスポンス & HTTP & --- & JSON1\\
+URL送信 & MQTT & volp/share/link & JSON2\\
+URL取得 & MQTT & volp/share/link & WAV(F32)\\
+音声取得 & HTTP & \$SHAREDLINK & ---\\
+取得レスポンス & HTTP & --- & 音声データ\\
+\end{tabular}\hfil}
+\end{table}
 
 %6
 \section{利用シナリオの検討}
@@ -195,7 +234,7 @@ MCU & MCU \\
 
 %7
 \section{おわりに}
-本研究では、非同期コミュニケーションを促進するためのIoTノードを提案した。そして、そのプロトタイプを設計・実装した。最後に、IoTノードの利用シナリオについて検討した。本IoTノードにより、非同期音声コミュニケーションの応用範囲が広がることが期待できる。今後は、このIoTノードを一般家庭や教育施設、高齢者施設に設置して、長期実証実験を行い、有効性を検証する予定である。
+本研究では、非同期コミュニケーションを促進するためのIoTノードを提案した。そして、そのプロトタイプを設計・実装した。最後に、IoTノードの利用シナリオについて検討した。本IoTノードにより、非同期音声コミュニケーションの応用範囲が広がることが期待できる。今後は、このIoTノードを一般家庭や教育施設、高齢者施設に設置し、長期実証実験を行い評価することで、有効性を検証する予定である。
 
 
 \bibliographystyle{ipsjunsrt}
