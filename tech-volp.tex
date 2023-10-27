@@ -32,7 +32,8 @@
 \author{岩井 将行}{Iwai Masayuki}{TDU}[iwai@cps.im.dendai.ac.jp]
 
 \begin{abstract}
-近年、ボイスメッセージの利用が広がりを見せている一方で、モバイル端末に不慣れな人々は非同期音声コミュニケーションを十分活用できていない。この問題を解決するため、本研究では非同期コミュニケーションのためのIoTノードVoLPを提案する。VoLPは録音データへのアクセスを、印刷したQRコードとして提供する。これにより、専用アプリケーションや専用サービスの利用を必要とせず、直感的かつ簡単に非同期音声コミュニケーションを活用できるようになる。本稿では、上記IoTノードの実装の詳細と、それを用いた使用シナリオを検討する。
+近年、ボイスメッセージの利用が広がりを見せている一方で、モバイル端末に不慣れな人々は非同期音声コミュニケーションを十分活用できていない。この問題を解決するため、本研究では非同期コミュニケーションのためのIoTノードVoLPを提案する。VoLPは録音データへのアクセスを、印刷したQRコードとして提供する。これにより、専用アプリケーションや専用サービスの利用を必要とせず、直感的かつ簡単に非同期音声コミュニケーションを活用できるようになる。本稿では, VoLPの提案と試作VoLPの実装について述べ, 最後にVoLPの利用シナリオを検討する。
+
 \end{abstract}
 
 \begin{jkeyword}
@@ -60,28 +61,6 @@
 % 2.1
 \subsection{非同期コミュニケーション}
 
-% 情報処理学会論文誌ジャーナルの\LaTeX スタイルファイルを含む論文執筆キットは
-% \begin{quote}
-% \small
-% \|http://www.ipsj.or.jp/jip/submit/style.html|
-% \end{quote}
-% からダウンロードすることができる．論文執筆キットは以下のファイルを含んで
-% いる．
-
-% \begin{enumerate}
-% \item \|ipsj.cls      |: 最終原稿用スタイルファイル
-% \item \|ipsjdraft.sty |: 投稿用スタイル（査読用）
-% \item \|ipsjpref.sty  |: 序文用スタイル
-% \item \|jsample.tex   |: 本稿のソースファイル
-% \item \|esample.tex   |: 英文サンプルのソースファイル
-% \item \|ipsjsort.bst  |: jBibTEX スタイル（著者名順）
-% \item \|ipsjunsrt.bst |: jBibTEX スタイル（出現順）
-% \item \|bibsample.bib |: 文献リストのサンプル
-% \item \|ebibsample.bib|: 英文文献リストのサンプル
-% \item \|tech-jsample.tex:| 研究報告（和文）のサンプル
-% \item \|tech-esample.tex:| 研究報告（英文）のサンプル
-% \end{enumerate}
-
 同期コミュニケーションと非同期コミュニケーションでは、コミュニケーションのありかたが自然と異なってくる。近年では、モバイル端末とインターネットの普及とともに、非同期型のコミュニケーションが急速に広がってきた。
 その中で非同期コミュニケーションには、同期コミュニケーションとは違った困難さが伴うこともわかってきている。そのためこれまでに、非同期コミュニケーションを支援する研究がいくつかある。
 時差のある遠隔地の間では、同期コミュニケーションよりも非同期コミュニケーションが適する。辻田らは、時差のある遠隔地の間で、相手の行動を時差の分だけずらして伝達することで、より有効な非同期コミュニケーションを実現するCU-Laterを提案した。これは時差をシステムで補正し、別の時間に同じ場所で行われていた行動の映像を表示することで、非同期コミュニケーションを促進するものである。
@@ -106,13 +85,6 @@ QRコードを利用した研究はいくつかある。たとえば古本らは
 %3
 \section{既存の非同期音声システム}
 
-% \label{sec:format}
-% 以下，情報処理学会論文誌ジャーナル用スタイルファイルを用いた論文フォーマットの指針について述べるので，
-% これに従って原稿を用意頂きたい．
-% \LaTeX を用いた一般的な文章作成技術については，
-% \cite{okumura, companion} 等を参考にされたい．
-
-
 % 3.1
 \subsection{留守番電話}
 留守番電話は、相手が電話に出られない場合にメッセージを残すことができるシステムであり、非同期コミュニケーションの一例である。留守番電話は電話線を通じてメッセージが送られるため、インターネット接続やスマートフォンが不要であり、幅広い年代の人々に利用されている。しかし、留守番電話のシステムは古いものであり、メッセージの共有や保存が不便である点が課題となっている。
@@ -131,441 +103,88 @@ QRコードを利用した研究はいくつかある。たとえば古本らは
 
 %4
 \section{提案手法}
-% \label{config}
-% ファイルは次のようになる．下線部は投稿時に省略可能なもの．
+\label{system}
+\subsection{概要}
+本稿で提案するIoTノードVoLPは、録音データへのアクセスを印刷したQRコードとして提供することで、すべての人が直感的かつ簡単に、非同期音声コミュニケーションを活用できるようになることを目的とする。この提案手法全体の概要図を\figref{fig:sys-overview}に示す。\par
+
+\begin{figure}[tb]
+\includegraphics[scale=0.15,bb= 0 0 2000 1000]{./image/overview_drawio.png}
+\caption{提案手法の概要図}
+\label{fig:sys-overview}
+\end{figure}
+
+\subsection{ノード一覧}
+本手法は大きく送信側と受信側に分けられる。
+ノード一覧を\tabref{tab:sys-nodes}に示す
+
+\begin{table}[tb] 
+\caption{ノード一覧} 
+\label{tab:sys-nodes}
+\hbox to\hsize{\hfil
+\begin{tabular}{l|l}\hline\hline
+音声送信側 &	音声受信側 \\\hline
+送信機 &	受信機      \\
+ &	スマートフォン \\\hline
+\end{tabular}\hfil}
+\end{table}
+
+\subsection{データの流れ}
+\label{dataflow}
+\figref{fig:sys-overview}中に、本手法におけるデータの経路を囲み数字で示した。経路は時系列順に以下のようになる。
+\subsubsection{送信側}
+\begin{itemize}
+    \item[\textcircled{\scriptsize 1}] 音声を録音する
+    \item[\textcircled{\scriptsize 2}] 録音した音声データを送信する
+    \item[\textcircled{\scriptsize 3}] 録音した音声データのURLを送信する 
+\end{itemize}
+
+\subsubsection{受信側}
+\begin{itemize}
+    \item[\textcircled{\scriptsize 4}] URLを受信する 
+    \item[\textcircled{\scriptsize 5}] URLをQRコードをに変換し、印刷する 
+    \item[\textcircled{\scriptsize 6}] 受信者所有のスマートフォンでQRコードを読み取る 
+    \item[\textcircled{\scriptsize 7}] 送信側で録音した音声データを取得する 
+    \item[\textcircled{\scriptsize 8}] 音声データを再生する       
+\end{itemize}
 
 
+\subsection{通信プロトコル}
+本手法で通信プロトコルは特に定義されないが、\ref{dataflow}中の \textcircled{\scriptsize 2}録音データの送信, \textcircled{\scriptsize 7}録音データの取得 ではHTTPが、 \textcircled{\scriptsize 3}録音データへのリンクの送信, \textcircled{\scriptsize 4}リンクの受信 ではMQTTが使用されることを想定している。
 
-% 4.1
-% \subsection{表題・著者名等}
+\subsection{ハードウェア}
+送信機受信機それぞれを構成するハードウェアの一覧を、\tabref{tab:sys-hardwares}に示す
 
-%  表題，著者名とその所属，および概要を前述のコマンドや環境により{\bf 和文と
-%  英文の双方について}定義した後，\|\maketitle| によって出力する．
-
-
-%  \newpage%%%%%
-
-% 4.1.1
-% \subsubsection{表題} 
-
-
-% 4.1.2
-% \subsubsection{著者名・所属} 
-
-%  各著者の所属を第一著者から順に \|\affiliate| を用いてラベル（第1引数）を付けながら定義すると，
-%  脚注に番号を付けて所属が出力される．
-%  なお，複数の著者が同じ所属である場合には，
-%  一度定義するだけで良い．
-
-
-
-%  現在の所属は \|\paffiliate| を用い，同様にラベル，所属先を記述する．
-%  所属先には自動で「現在」，
-%  \|\\|の改行で「Presently with」が挿入される．
-%  著者名は \|\author| で定義する．各著者名の直後に，英文著者名，
-%  所属ラベルとメールアドレスを記入する．
-%  著者が複数の場合は \|\author| を繰り返すことで，
-%  2人，3人，\dots と増えていく．
-%  現在の所属や，複数の所属先を追加する場合には，所属ラベルをカンマで区切り，追加すればよい．
-
-% 4.1.3
-% \subsubsection{概要} 
-
-% 4.2
-% \subsection{本文}
-
-% 4.2.1
-% \subsubsection{見出し}
-
-%  節や小節の見出しには \|\section|, \|\subsection|, \|\subsubsection|,
-%  \|\paragraph| といったコマンドを使用する．
-
-%  \<「定義」，「定理」などについては，\|\newtheorem|で適宜環境を宣言し，そ
-%  の環境を用いて記述する．
-
-% 4.2.2
-% \subsubsection{行送り}
-
-
-% 4.2.3
-% \subsubsection{フォントサイズ}
-
-%  フォントサイズは，スタイルファイルによって自動的に設定されるため，
-%  基本的には著者が自分でフォントサイズを変更する必要はない．
-
-% 4.2.4
-% \subsubsection{句読点}
-
-%  句点には全角の「．」，
-%  読点には全角の「，」を用いる．
-%  ただし英文中や数式中で「.」や「,」を使う場合には，
-%  半角文字を使う．「。」や「、」は使わない．
-
-% 4.2.5
-% \subsubsection{全角文字と半角文字}
-
-% 全角文字と半角文字の両方にある文字は次のように使い分ける．
-
-% %4.2.6
-% \subsubsection{箇条書}
-
-% %4.2.7
-% \subsubsection{脚注}
-
-%  脚注は \|\footnote| コマンドを使って書くと，
-%  ページ単位に\footnote{脚注の例．}や\footnote{二つめの脚注．}のような参照記号とともに脚注が生成される．
-%  なお，ページ内に複数の脚注がある場合，参照記号は\LaTeX を2回実行しないと正しくならないことに注意されたい．
-
-%  また場合によっては，
-%  脚注をつけた位置と脚注本体とを別の段に置く方がよいこともある．
-%  この場合には，\|\footnotemark| コマンドや \|\footnotetext| コマンドを使って対処していただきたい．
-
-%  なお，脚注番号は論文内で通し番号で出力される．
-
-% 4.2.8
-% \subsubsection{OverfullとUnderfull}
-
-% 4.3
-% \subsection{数式}\label{sec:Item}
-
-% 4.3.1
-% \subsubsection{本文中の数式}
-
-% 4.3.2
-% \subsubsection{別組の数式}
-
-% 4.3.3
-% \subsubsection{eqnarray環境}
-
-% 4.3.4
-% \subsubsection{数式のフォント}
-
-%  \begin{figure}[tb]
-%  \setbox0\vbox{
-%  \hbox{\|\begin{figure}[tb]|}
-%  \hbox{\quad \|<|図本体の指定\|>|}
-%  \hbox{\|\caption{<|和文見出し\|>}|}
-%  \hbox{\|\ecaption{<|英文見出し\|>}|}
-%  \hbox{\|\label{| $\ldots$ \|}|}
-%  \hbox{\|\end{figure}|}
-%  }
-%  \centerline{\fbox{\box0}}
-%  \caption{1段幅の図}
-%  \ecaption{Single column figure with caption\\
-%  explicitly broken by $\backslash\backslash$.}
-%  \label{fig:single}
-%  \end{figure}
-
-% 4.4
-% \subsection{図}
-
-%  1段の幅におさまる図は，
-%  \figref{fig:single} の形式で指定する．
-%  位置の指定に \|h| は使わない．
-%  また，図の下に和文と英文の双方の見出しを，
-%  \|\caption| と \|\ecaption| で指定する．
-%  文字数が多い見出しはは自動的に改行して最大幅の行を基準にセンタリングするが，
-%  見出しが2行になる場合には適宜 \|\\| を挿入して改行したほうが良い結果となることがしばしばある
-%  （\figref{fig:single} の英文見出しを参照）．
-%  図の参照は \|\figref{<|ラベル\|>}| を用いて行なう．
-
-%  \begin{figure}[tb]
-%  \begin{minipage}[t]{0.5\columnwidth}
-%  \footnotesize
-%  \setbox0\vbox{
-%  \hbox{\|\begin{minipage}[t]%|}
-%  \hbox{\|  {0.5\columnwidth}|}
-%  \hbox{\|\CaptionType{table}|}
-%  \hbox{\|\caption{| \ldots \|}|}
-%  \hbox{\|\ecaption{| \ldots \|}|}
-%  \hbox{\|\label{| \ldots \|}|}
-%  \hbox{\|\makebox[\textwidth][c]{%|}
-%  \hbox{\|\begin{tabular}[t]{lcr}|}
-%  \hbox{\|\hline\hline|}
-%  \hbox{\|left&center&right\\\hline|}
-%  \hbox{\|L1&C1&R1\\|}
-%  \hbox{\|L2&C2&R2\\\hline|}
-%  \hbox{\|\end{tabular}}|}
-%  \hbox{\|\end{minipage}|}}
-%  \hbox{}
-%  \centerline{\fbox{\box0}}
-%  \caption{\protect\tabref*{tab:right} の中身}
-%  \ecaption{Contents of Table \protect\ref{tab:right}.}
-%  \label{fig:left}
-%  \end{minipage}%
-%  \begin{minipage}[t]{0.5\columnwidth}
-%  \CaptionType{table}
-%  \caption{\protect\figref*{fig:left} で作成した表}
-%  \ecaption{A table built by\\ Fig.\,\protect\ref{fig:left}.}
-%  \label{tab:right}
-%  \vskip1mm
-%  \makebox[\textwidth][c]{\begin{tabular}[t]{lcr}\hline\hline
-%  left&center&right\\\hline
-%  L1&C1&R1\\
-%  L2&C2&R2\\\hline
-%  \end{tabular}}
-%  \end{minipage}
-%  \end{figure}
-
-%  \begin{figure*}[tb]
-%  \setbox0\vbox{\large
-%  \hbox{\|\begin{figure*}[t]|}
-%  \hbox{\quad \|<|図本体の指定\|>|}
-%  \hbox{\|\caption{<|和文見出し\|>}|}
-%  \hbox{\|\ecaption{<|英文見出し\|>}|}
-%  \hbox{\|\label{| $\ldots$ \|}|}
-%  \hbox{\|\end{figure*}|}}
-%  \centerline{\fbox{\hbox to.9\textwidth{\hss\box0\hss}}}
-%  \caption{2段幅の図}
-%  \ecaption{Double column figure.}
-%  \label{fig:double}
-%  \end{figure*}
-
-
-%  また紙面スペースの節約のために，
-%  1つの \|figure|（または \|table|）環境の中に複数の図表を並べて表示したい場合には，
-%  \figref{fig:left} と \tabref{tab:right} のように個々の図表と各々の \|\caption|/\|\ecaption| 
-%  を \|minipage| 環境に入れることで実現できる．
-%  なお図と表が混在する場合，
-%  \|minipage| 環境の中で\|\CaptionType{figure}| あるいは \|\CaptionType|
-%  \|{table}| を指定すれば，
-%  外側の環境が \|figure| であっても \|table| であっても指定された見出しが得られる．
-
-
-
-%  2段の幅にまたがる図は，
-%  \figref{fig:double} の形式で指定する．
-%  位置の指定は \|t| しか使えない．
-
-
-
-%  図の中身では本文と違い，
-%  どのような大きさのフォントを使用しても構わない（\figref{fig:double} 参照）．
-%  また図の中身として，encapsulate されたPostScriptファイル（いわゆるEPSファイル）を読み込むこともできる．
-%  読み込みのためには，プリアンブルで
-%  
-%  \begin{quote}
-%  \|\usepackage{graphicx}|
-%  \end{quote}
-%  
-%  を行った上で，
-%  \|\includegraphics| コマンドを図を埋め込む箇所に置き，
-%  その引数にファイル名（など）を指定する．
-
-% 4.5
-% \subsection{表}
-
-%  表の罫線はなるべく少なくするのが，仕上がりをすっきりさせるコツである．
-%  罫線をつける場合には，
-%  一番上の罫線には二重線を使い，左右の端には縦の罫線をつけない （\tabref{tab:example}）．
-%  表中のフォントサイズのデフォルトは\|\footnotesize|である．
-
-
-%  また，表の上に和文と英文の双方の見出しを，
-%  \|\caption|と \|\ecaption| で指定する．
-%  表の参照は \|\tabref{<|ラベル\|>}| を用いて行なう．
-
-%  \begin{table}[tb] 
-%  \caption{表の例} 
-%  \ecaption{An Example of Table.}
-%  \label{tab:example}
-%  \hbox to\hsize{\hfil
-%  \begin{tabular}{l|lll}\hline\hline
-%  & column1 & column2 & column3 \\\hline
-%  row1 &	item 1,1 & item 2,1 & ---\\
-%  row2 &	---      & item 2,2 & item 3,2 \\
-%  row3 &	item 1,3 & item 2,3 & item 3,3 \\
-%  row4 &	item 1,4 & item 2,4 & item 3,4 \\\hline
-%  \end{tabular}\hfil}
-%  \end{table}
-
-% \newpage%%%%%
-
-% 4.6
-% \subsection{参考文献・謝辞}
-
-% 4.6.1
-% \subsubsection{参考文献の参照}
-
-%  本文中で参考文献を参照する場合には\|\cite|を使用する．
-%  参照されたラベルは自動的にソートされ，
-%  \|[]|でそれぞれ区切られる．
-%  %
-%  \begin{quote}
-%  文献 \|\cite{companion,okumura}| は\LaTeX の総合的な解説書である．
-%  \end{quote}
-%  %
-%  と書くと；
-%  %
-%  \begin{quote}
-%  文献\cite{companion,okumura}は\LaTeX の総合的な解説書である．
-%  \end{quote}
-%  %
-%  が得られる．
-
-% 4.6.2
-% \subsubsection{参考文献リスト}
-%  参考文献リストには，
-%  原則として本文中で引用した文献のみを列挙する．
-%  順序は参照順あるいは第一著者の苗字のアルファベット順とする．
-%  文献リストはBiB\TeX と\verb+ipsjunsrt.bst+（参照順）
-%  または\verb+ipsjsort.bst+（アルファベット順）を用いて作り，
-%  \verb+\bibliograhpystyle+と\verb+\bibliography+コマンドにより
-%  利用することが出来る．
-%  これらを用いれば，
-%  規定の体裁にあったものができるので，
-%  できるだけ利用していただきたい．
-%  また製版用のファイル群には\verb+.bib+ファイルではなく\verb+.bbl+ファイルを
-%  必ず含めることに注意されたい．
-%  一方，何らかの理由でthebibliography環境で文献リストを
-%  「手作り」しなければならない場合は，
-%  このガイドの参考文献リストを注意深く見て，
-%  そのスタイルにしたがっていただきたい．
-
-% 4.6.3
-% \subsubsection{謝辞}
-
-%  謝辞がある場合には，
-%  参考文献リストの直前に置き，
-%  \|acknowledgment|環境の中に入れる．
+\begin{table}[tb] 
+\caption{ハードウェア一覧} 
+\label{tab:sys-hardwares}
+\hbox to\hsize{\hfil
+\begin{tabular}{l|l}\hline\hline
+送信機 &	受信機 \\\hline
+MCU & MCU \\
+マイクロフォン &	プリンター \\\hline
+\end{tabular}\hfil}
+\end{table}
 
 %5
-\section{IoTノードの提案}
+\section{試作}
+\ref{system}章で提案したIoTノードVoLPを、以下の観点を考慮して試作した。本章では試作の詳細を述べる。
+\begin{itemize}
+    \item 屋内の電力が供給できる場所に設置することを想定
+    \item 非同期コミュニケーションの場所的な自由度を高めるため、据え置き型のプリンターではなく感熱プリンターを採用
+\end{itemize}
+\subsection{概要}
+本稿で提案するIoTノードVoLPは、録音データへのアクセスを印刷したQRコードとして提供することで、すべての人が直感的かつ簡単に、非同期音声コミュニケーションを活用できるようになることを目的とする。この提案手法全体の概要図を\figref{fig:proto-overview}に示す。\par
+\begin{figure}[tb]
+\includegraphics[scale=0.15,bb= 0 0 2000 1000]{./image/overview_drawio.png}
+\caption{提案手法の概要図}
+\label{fig:sys-overview}
+\end{figure}
 
-% 論文の内容について，
-% 論文誌ジャーナル編集委員会で作成した「べからず集」を以下に示す．
-% 投稿前のチェックリストとして利用頂きたい．
-% これ以外にも，査読者用，
-% メタ査読者用の「べからず集」\cite{webpage2}も公開しているので，
-% 参照されたい．
-% また，作文技術に関する \cite{book1, book2, book3, book4}のような書籍も参考になる．
+\subsection{ハードウェア}
 
-%5.1
-% \subsection{書き方の基本}
-
-% \begin{itemize}
-%  \item[$\Box$] 研究の新規性，有用性，信頼性が読者に伝わるように記述する．
-%  \item[$\Box$] 読み手に，読みやすい文章を心がける（内容が前後する，背景・
-% 	       課題の設定が不明瞭などは読者にとって負担）．
-%  \item[$\Box$] 解決すべき問題が汎用化（一般的に記述）されていないのは再
-% 	       考を要する（XX大学の問題という記述に終始）．あるいは，
-% 	       （単に「作りました」だけで）解決すべき問題そのものの記述
-% 	       がないのは再考を要する．
-%  \item[$\Box$] 結論が明確に記されていない，または，範囲，限界，問題点な
-% 	       どの指摘が適切ではない，または，結論が内容にそったもので
-% 	       はないものは再考を要する．
-%  \item[$\Box$] 科学技術論文として不適当な表現や，分かりにくい表現がある
-% 	       のは再考を要する．
-%  \item[$\Box$] 極端な口語体や，長文の連続などは再考を要する．
-%  \item[$\Box$] 章，節のたて方，全体の構成等が適切でない文章は再考を要す
-% 	       る．
-%  \item[$\Box$] 文中の文脈から推測しないと内容の把握が困難な論文にしない．
-%  \item[$\Box$] 説明に飛躍した点があり，仮説等の説明が十分ではないのは再
-% 	       考を要する．
-%  \item[$\Box$] 説明に冗長な点，逆に簡単すぎる点があるのは再考を要する．
-%  \item[$\Box$] 未定義語を減らす．
-% \end{itemize}
-
-%5.2
-% \subsection{新規性と有効性を明確に示す}
-
-% \begin{itemize}
-%  \item[$\Box$] 在来研究との関連，研究の動機，ねらい等が明確に説明されて
-% 	       いないのは再考を要する．
-%  \item[$\Box$] 既知／公知の技術が何であって，何を新しいアイデアとして提
-% 	       案しているのかが書かれていないのは再考を要する．
-%  \item[$\Box$] 十分な参考文献は新規性の主張に欠かせない．
-%  \item[$\Box$] 提案内容の説明が，概念的または抽象的な水準に終始していて，
-% 	       読者が提案内容を理解できない（それだけで新規性が感じられ
-% 	       ないもの）のは再考を要する．
-%  \item[$\Box$] 論文で提案した方法の有効性の主張がない，またはきわめて貧
-% 	       弱なのは再考を要する．
-% \end{itemize}
-
-%5.3
-% \subsection{書き方に関する具体的な注意}
-
-% \begin{itemize}
-%  \item[$\Box$] 和文標題が内容を適切に表現していないのは再考を要する．
-%  \item[$\Box$] 英文標題が内容を適切に表現していない，または英語として適
-% 	       切でないのは再考を要する．
-%  \item[$\Box$] アブストラクトが主旨を適切に表現していない，または英文が
-% 	       適切ではないのは再考を要する．
-%  \item[$\Box$] 記号・略号等が周知のものでなく，または，用語が適切でなく，
-% 	       または，図・表の説明が適当ではないのは再考を要する．
-%  \item[$\Box$] 個人的あるいは非常に小さなグループ／企業だけで通用するよ
-% 	       うな用語が特別な説明もなしに多用されているのは再考を要す
-% 	       る．
-%  \item[$\Box$] 図表自体は十分に明確ではない，または誤りがあるのは再考を
-% 	       要する．
-%  \item[$\Box$] 図表が鮮明ではないのは再考を要する．
-%  \item[$\Box$] 図表が大きさ，縮尺の指定が適切でないのは再考を要する.
-% \end{itemize}
-
-%5.4
-% \subsection{参考文献}
-
-% \begin{itemize}
-%  \item[$\Box$] 参考文献は10件以上必要（分野によっては20件以上，30件以上
-% 	       という意見もある）.
-%  \item[$\Box$] 十分な参考文献は新規性の主張に欠かせない．
-%  \item[$\Box$] 適切な文献が引用されておらず，その数も適切ではないのは再
-% 	       考を要する．
-%  \item[$\Box$] 日本人によるしかるべき論文を引用することで日本人研究コミュ
-% 	       ニティの発展につながる．
-%  \item[$\Box$] 参考文献は自分のものばかりではだめ．
-% \end{itemize}
-
-%5.5
-% \subsection{二重投稿}
-
-% \begin{itemize}
-%  \item[$\Box$] 二重投稿はしてはならない ─ ただし国際会議に採択された論
-% 	       文を著作権が問題にならないように投稿することは構わない．
-%  \item[$\Box$] 他の論文とまったく同じ図表を引用の明示なしに利用すること
-% 	       は禁止．
-%  \item[$\Box$] 既発表の論文等との間に重複があるのは再考を要する．
-% \end{itemize}
-
-%5.6
-% \subsection{他の人に読んでもらう}
-
-% \begin{itemize}
-%  \item[$\Box$] 投稿経験が少ない人は，採録された経験の豊富な人に校正して
-% 	       もらう．
-%  \item[$\Box$] 読者の立場から見て論理的な飛躍がないかに注意して記述する．
-% \end{itemize}
-
-%5.7
-% \subsection{その他}
-
-% \begin{itemize}
-%  \item[$\Box$] 投稿前にチェックリストの各項目を満たしているか，必ず確認
-% 	       する． 
-% \end{itemize}
+\subsection{通信インタフェース}
 
 %6
-\section{プロトタイプ実装}
-
-% 本稿では，A4縦型2段組み用に変更したスタイルファイルを用いた論文のフォー
-% マット方法と，論文誌ジャーナル編集委員会がまとめた「べからず集」に基づく
-% 論文の書き方を示した．内容的にまだ不十分の部分が多いため，意見，要望等を
-% \begin{quote}
-%  \|editt@ipsj.or.jp|
-% \end{quote}
-% までお寄せ頂きたい．
-
-
-
-% \begin{acknowledgment}
-% A4横型に対するガイドを基に，本稿を作成した．
-% クラスファイルの作成においては，
-% 京都大学の中島　浩氏にさまざまなご教示を頂き，
-% さらにBiB\TeX 関連ファイルの利用についても快諾頂いたことを深謝する．
-% また，A4横型に対するガイドを作成された当時の編集委員会の担当者に深謝する．
-% \end{acknowledgment}
-
-%7
 \section{利用シナリオの検討}
 本研究のIoTノードは、音声データへのURLを紙に印刷する。これは2 関連研究で調査した既存の提案にはない特徴的な性質である。この性質から、本IoTノードは以下のように利用方法が拡張される
 \begin{enumerate}
@@ -574,10 +193,13 @@ QRコードを利用した研究はいくつかある。たとえば古本らは
     \item 声ラベルをホワイトボードや黒板に多数貼り付けることで、スペースのかぎり、音声データを間接的に一覧できる
 \end{enumerate}
 
-%8
+%7
 \section{おわりに}
 本研究では、非同期コミュニケーションを促進するためのIoTノードを提案した。そして、そのプロトタイプを設計・実装した。最後に、IoTノードの利用シナリオについて検討した。本IoTノードにより、非同期音声コミュニケーションの応用範囲が広がることが期待できる。今後は、このIoTノードを一般家庭や教育施設、高齢者施設に設置して、長期実証実験を行い、有効性を検証する予定である。
+
 
 \bibliographystyle{ipsjunsrt}
 \bibliography{volp} 
 \end{document}
+
+
