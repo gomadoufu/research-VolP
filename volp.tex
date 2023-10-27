@@ -25,7 +25,7 @@
 \begin{document}
 
 
-\title{VoLP: 非同期音声コミュニケーション促進のための\\IoTノードの提案}
+\title{VoLP:声ラベルプリンタ 同期音声コミュニケーション促進のためのIoTノードの提案}
 
 \affiliate{TDU}{東京電機大学未来科学部情報メディア学科}
 \author{橋本 慶紀}{Hashimoto Yoshiki}{TDU}[yoshiki@cps.im.dendai.ac.jp]
@@ -165,7 +165,21 @@ MCU/MPU & MCU/MPU \\
 
 %5
 \section{試作}
-\ref{system}章で提案したIoTノードVoLPを，以下の観点を考慮して試作した．本章では試作の詳細を述べる．
+\ref{system}章で提案したIoTノードVoLPを，以下の観点を考慮して試作した．
+
+\begin{figure}[tb]
+\includegraphics[scale=0.35,bb= 0 0 2000 1000]{image/device.png}
+\caption{試作したIoTノード}
+\label{fig:device}
+\end{figure}
+
+\begin{figure}[tb]
+\includegraphics[scale=0.35,bb= 0 0 2000 1000]{image/paper.png}
+\caption{紙に印刷したQRコード}
+\label{fig:paper}
+\end{figure}
+
+本章では試作の詳細を述べる．
 \begin{itemize}
     \item 屋内の電力が供給できる場所に設置することを想定
     \item 非同期コミュニケーションの場所的な自由度を高めるため，据え置き型のプリンターではなく感熱プリンターを採用
