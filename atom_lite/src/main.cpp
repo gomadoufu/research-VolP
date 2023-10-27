@@ -1,166 +1,141 @@
-
-#include "PrinterApi.h"
-#include "mybitmap.h"
-#include <ArduinoJson.h>
+#include <ArduinoJson.h> //https://github.com/bblanchon/ArduinoJson (use v6.xx)
 #include <M5Atom.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
+#define emptyString String()
 
-// CPSLAB_minimini.png
-// https://m5stack.lang-ship.com/tools/image2data/
+// Follow instructions from
+// https://github.com/debsahu/ESP-MQTT-AWS-IoT-Core/blob/master/doc/README.md
+// Enter values in secrets.h ▼
+#include "secrets.h"
+const char *MQTT_SUB_TOPIC = "volp/share/link";
+const int MQTT_PORT = 8883;
 
-const uint16_t imgWidth = 104;
-const uint16_t imgHeight = 141;
+WiFiClientSecure net;
 
-// 1bit Dump
+PubSubClient client(net);
 
-Printer atomPrinter;
-HardwareSerial AtomSerial(1);
+unsigned long lastMillis = 0;
 
-#define SERVER "mqtt.beebotte.com" // Domain name of Beebotte MQTT service
-
-// Enter your WiFi credentials
-const char *ssid = "CPSLAB_WLX";
-const char *password = "6bepa8ideapbu";
-
-// to track delay since last reconnection
-int64_t lastReconnectAttempt = 0;
-
-WiFiClient wifiClient;
-PubSubClient client(wifiClient);
-
-#define TOKEN "token_reIEJ1cjo8Wz12sj" // Set your channel token here
-#define CHANNEL "CPSLAB"               // Replace with your device name
-#define TOPIC "opencampus" // ここがMQTTのトピックであることに注意
-
-void onMessage(char *_topic, byte *payload, unsigned int length);
-
-void Print_BMP(int width, int height, const unsigned char *data, int mode,
-               int wait) {
-  AtomSerial.write(0x1D);
-  AtomSerial.write(0x76);
-  AtomSerial.write(0x30);                     // 0
-  AtomSerial.write(mode);                     // m
-  AtomSerial.write((width / 8) & 0xff);       // xL
-  AtomSerial.write((width / 256 / 8) & 0xff); // xH
-  AtomSerial.write((height)&0xff);            // yL
-  AtomSerial.write((height / 256) & 0xff);    // yH
-  for (int i = 0; i < (width / 8 * height); i++) {
-    AtomSerial.write(data[i]); // data
-    delay(wait);
+void messageReceived(char *topic, byte *payload, unsigned int length) {
+  Serial.print("Received [");
+  Serial.print(topic);
+  Serial.print("]: ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
   }
+  Serial.println();
+}
+
+void pubSubErr(int8_t MQTTErr) {
+  if (MQTTErr == MQTT_CONNECTION_TIMEOUT)
+    Serial.print("Connection tiemout");
+  else if (MQTTErr == MQTT_CONNECTION_LOST)
+    Serial.print("Connection lost");
+  else if (MQTTErr == MQTT_CONNECT_FAILED)
+    Serial.print("Connect failed");
+  else if (MQTTErr == MQTT_DISCONNECTED)
+    Serial.print("Disconnected");
+  else if (MQTTErr == MQTT_CONNECTED)
+    Serial.print("Connected");
+  else if (MQTTErr == MQTT_CONNECT_BAD_PROTOCOL)
+    Serial.print("Connect bad protocol");
+  else if (MQTTErr == MQTT_CONNECT_BAD_CLIENT_ID)
+    Serial.print("Connect bad Client-ID");
+  else if (MQTTErr == MQTT_CONNECT_UNAVAILABLE)
+    Serial.print("Connect unavailable");
+  else if (MQTTErr == MQTT_CONNECT_BAD_CREDENTIALS)
+    Serial.print("Connect bad credentials");
+  else if (MQTTErr == MQTT_CONNECT_UNAUTHORIZED)
+    Serial.print("Connect unauthorized");
+}
+
+void connectToMqtt(bool nonBlocking = false) {
+  Serial.print("MQTT connecting ");
+  while (!client.connected()) {
+    if (client.connect(THINGNAME)) {
+      Serial.println("connected!");
+      if (!client.subscribe(MQTT_SUB_TOPIC))
+        pubSubErr(client.state());
+    } else {
+      Serial.print("failed, reason -> ");
+      pubSubErr(client.state());
+      if (!nonBlocking) {
+        Serial.println(" < try again in 5 seconds");
+        delay(5000);
+      } else {
+        Serial.println(" <");
+      }
+    }
+    if (nonBlocking)
+      break;
+  }
+}
+
+void connectToWiFi(String init_str) {
+  if (init_str != emptyString)
+    Serial.print(init_str);
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(1000);
+  }
+  if (init_str != emptyString)
+    Serial.println("ok!");
+}
+
+void checkWiFiThenMQTT(void) {
+  connectToWiFi("Checking WiFi");
+  connectToMqtt();
+}
+
+unsigned long previousMillis = 0;
+const long interval = 5000;
+
+void checkWiFiThenMQTTNonBlocking(void) {
+  connectToWiFi(emptyString);
+  if (millis() - previousMillis >= interval && !client.connected()) {
+    previousMillis = millis();
+    connectToMqtt(true);
+  }
+}
+
+void checkWiFiThenReboot(void) {
+  connectToWiFi("Checking WiFi");
+  Serial.print("Rebooting");
+  ESP.restart();
 }
 
 void setup() {
   M5.begin(true, false, true);
   Serial.begin(115200);
-  atomPrinter.Set_Printer_Uart(AtomSerial, 23, 33, 9600);
-  atomPrinter.Printer_Init();
-  atomPrinter.NewLine_Setting(0x0A);
+  delay(5000);
+  Serial.println();
+  Serial.println();
+  WiFi.setHostname(THINGNAME);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  connectToWiFi(String("Attempting to connect to SSID: ") + String(WIFI_SSID));
 
-  /** Wifiの設定 **/
-  Serial.println("Connecting to WiFi...");
-  M5.dis.drawpix(0, 0x00ffff);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi Connection Failed, Retrying...");
-    M5.dis.drawpix(0, 0xff0000);
-    delay(1000);
-  }
-  Serial.println("Connected to WiFi.");
-  M5.dis.drawpix(0, 0x00ff00);
+  net.setCACert(AWS_CERT_CA);
+  net.setCertificate(AWS_CERT_CRT);
+  net.setPrivateKey(AWS_CERT_PRIVATE);
 
-  /** MQTT Client Serverの設定 **/
-  client.setServer(SERVER, 1883);
-  client.setCallback(onMessage);
+  client.setServer(AWS_IOT_ENDPOINT, MQTT_PORT);
+  client.setCallback(messageReceived);
 
-  // give the WiFi a second to initialize:
-  delay(1000);
-  lastReconnectAttempt = 0;
-}
-
-/** MQTTメッセージ受信時のコールバック関数 **/
-void onMessage(char *_topic, byte *payload, unsigned int length) {
-  Serial.println("Message arrived");
-  M5.dis.drawpix(0, 0x00ff00);
-
-  // Convert byte* payload to String
-  String payload_str = String((char *)payload).substring(0, length);
-
-  // Deserialize JSON
-  DynamicJsonDocument jsonDoc(128);
-  DeserializationError error = deserializeJson(jsonDoc, payload_str);
-
-  if (error) {
-    // If there's an error in parsing, display it on the screen
-    Serial.println("Failed to parse JSON");
-    M5.dis.drawpix(0, 0xffff00);
-    Serial.println(error.c_str());
-    return;
-  }
-  // Read 'status' from JSON
-  const char *status = jsonDoc["data"];
-
-  // ここでstatusにQRコードのURLが入っている
-  Serial.println(status);
-
-  atomPrinter.Printer_Init();
-  atomPrinter.Print_NewLine(2);
-  //   atomPrinter.Printer_Init();
-  //   Print_BMP(352, 350, iwaiimg, 0x30, 10);
-  atomPrinter.Printer_Init();
-  atomPrinter.Print_ASCII("TDU\n");
-  atomPrinter.Print_ASCII("Open Campus 2023\n");
-  atomPrinter.Print_ASCII("CPSLAB:\n");
-  atomPrinter.Print_ASCII("Cyber Physical System Lab\n");
-  atomPrinter.Print_NewLine(2);
-  atomPrinter.Printer_Init();
-  atomPrinter.Set_adjlevel("M");
-  atomPrinter.Set_QRCode(status);
-  atomPrinter.Print_QRCode();
-  atomPrinter.Print_NewLine(2);
-
-  //   printer.init();
-  //   printer.printASCII("TDUCPSLAB");
-  //   printer.printBMP(0, 32, 32, img);
-  //   printer.printQRCode(status);
-  //   printer.printASCII("\n \n \n \n \n");
-  delay(3000);
-}
-
-/** MQTT接続用関数 **/
-boolean reconnect() {
-  uint64_t chipid = ESP.getEfuseMac();
-  String clientId = "ESP32-" + String((uint16_t)(chipid >> 32), HEX);
-  Serial.println("Connecting to MQTT...");
-  M5.dis.drawpix(0, 0x00ffff);
-  if (client.connect(clientId.c_str(), TOKEN, "")) {
-    Serial.println("MQTT connected");
-    M5.dis.drawpix(0, 0x00ff00);
-    char topic[64];
-    sprintf(topic, "%s/%s", CHANNEL, TOPIC);
-    client.subscribe(topic);
-  } else {
-    Serial.println("MQTT Connection Failed, Retrying...");
-    M5.dis.drawpix(0, 0xff0000);
-    Serial.println(client.state());
-  }
-  return client.connected();
+  connectToMqtt();
 }
 
 void loop() {
   if (!client.connected()) {
-    int64_t now = millis();
-    if (now - lastReconnectAttempt > 5000) {
-      lastReconnectAttempt = now;
-      // Attempt to reconnect
-      if (reconnect()) {
-        lastReconnectAttempt = 0;
-      }
-    }
+    checkWiFiThenMQTT();
+    // checkWiFiThenMQTTNonBlocking();
+    // checkWiFiThenReboot();
   } else {
-    // Client connected
-    delay(50);
     client.loop();
+    if (millis() - lastMillis > 5000) {
+      lastMillis = millis();
+    }
   }
 }

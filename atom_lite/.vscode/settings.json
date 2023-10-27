@@ -1,0 +1,9 @@
+{
+  "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
+    "misc-include-cleaner",
+    "misc-const-correctness",
+    "misc-include-cleaner",
+    "bugprone-narrowing-conversions",
+    "bugprone-narrowing-conversions"
+  ]
+}
