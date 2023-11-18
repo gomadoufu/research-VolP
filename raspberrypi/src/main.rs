@@ -1,13 +1,28 @@
 use anyhow::{Ok, Result};
 use chrono::Local;
 use reqwest::Response;
+use rppal::gpio::Gpio;
 use volp_raspberrypi::{
     gcp_auth, mqtt_pub, record_and_create, share_file, upload_file, RequiredFields, SharedLink,
 };
 
+const GPIO_BUTTON: u8 = 22;
+const GPIO_LED: u8 = 24;
+
 #[tokio::main]
 async fn main() -> Result<()> {
     loop {
+        let button = Gpio::new()?.get(GPIO_BUTTON)?.into_input_pulldown();
+        let mut led= Gpio::new()?.get(GPIO_LED)?.into_output();
+
+        led.set_low();
+
+        if button.is_low() {
+            continue;
+        }
+
+        led.set_high();
+
         // 今の時間を取得して、ファイル名にする
         let now = Local::now();
         let file_name: String = now.format("%Y-%m-%d-%H-%M-%S.wav").to_string();
