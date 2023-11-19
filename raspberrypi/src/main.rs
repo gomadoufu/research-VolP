@@ -1,7 +1,7 @@
 use anyhow::{Ok, Result};
 use chrono::Local;
 use reqwest::Response;
-use rppal::gpio::Gpio;
+use rppal::gpio::{Gpio, InputPin};
 use volp_raspberrypi::{
     gcp_auth, mqtt_pub, record_and_create_file, share_file, upload_file, RequiredFields, SharedLink,
 };
@@ -29,9 +29,6 @@ async fn main() -> Result<()> {
 
         // 録音して、ファイルを作成する
         record(file_name.as_str(), &button)?;
-
-        // ボタンが離されるまで待つ
-        while button.is_low() {}
 
         // ファイルをアップロードする
         let response: Response = upload(file_name.as_str()).await?;

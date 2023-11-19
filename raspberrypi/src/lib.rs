@@ -1,9 +1,10 @@
 use anyhow::{Ok, Result};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{FromSample, Sample, Stream};
+use cpal::{FromSample, Sample, SupportedStreamConfig, SampleRate, SampleFormat::I16, SupportedBufferSize::Range};
 use reqwest::Response;
 use rumqttc::{self, Key, QoS, TlsConfiguration, Transport};
 use rumqttc::{AsyncClient, MqttOptions};
+use rppal::gpio::InputPin;
 use serde_json::json;
 use std::fs::File;
 use std::io::BufWriter;
@@ -19,14 +20,14 @@ pub fn record_and_create_file(
 ) -> Result<()> {
     let host = cpal::default_host();
 
-    let device = host
-        .default_input_device()
-        .ok_or_else(|| anyhow::anyhow!("Failed to get default input device"))?;
+    let device = host.devices().unwrap().find(|d| d.name().unwrap() == "default:CARD=USB").unwrap();
 
-    let config = device
-        .default_input_config()
-        .expect("Failed to get default input config");
-    println!("Default input config: {:?}", config);
+    let config = SupportedStreamConfig::new(
+        1,
+        SampleRate(44100),
+        Range { min: 90, max: 96000},
+        I16,
+    );
 
     let path = format!("./sound/{}", file_name);
 
