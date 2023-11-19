@@ -3,7 +3,7 @@ use chrono::Local;
 use reqwest::Response;
 use rppal::gpio::Gpio;
 use volp_raspberrypi::{
-    gcp_auth, mqtt_pub, record_and_create, share_file, upload_file, RequiredFields, SharedLink,
+    gcp_auth, mqtt_pub, record_and_create_file, share_file, upload_file, RequiredFields, SharedLink,
 };
 
 const GPIO_BUTTON: u8 = 22;
@@ -13,7 +13,7 @@ const GPIO_LED: u8 = 24;
 async fn main() -> Result<()> {
     loop {
         let button = Gpio::new()?.get(GPIO_BUTTON)?.into_input_pulldown();
-        let mut led= Gpio::new()?.get(GPIO_LED)?.into_output();
+        let mut led = Gpio::new()?.get(GPIO_LED)?.into_output();
 
         led.set_low();
 
@@ -28,7 +28,10 @@ async fn main() -> Result<()> {
         let file_name: String = now.format("%Y-%m-%d-%H-%M-%S.wav").to_string();
 
         // 録音して、ファイルを作成する
-        record(file_name.as_str())?;
+        record(file_name.as_str(), &button)?;
+
+        // ボタンが離されるまで待つ
+        while button.is_low() {}
 
         // ファイルをアップロードする
         let response: Response = upload(file_name.as_str()).await?;
@@ -45,7 +48,7 @@ async fn main() -> Result<()> {
     }
 }
 
-fn record(file_name: &str) -> Result<()> {
+fn record(file_name: &str, button: &InputPin) -> Result<()> {
     // 出力するWAVファイルの設定
     // Int16じゃないと、Drive側で再生できない
     // 入力は自動で設定される
@@ -56,7 +59,9 @@ fn record(file_name: &str) -> Result<()> {
         sample_format: hound::SampleFormat::Int,
     };
 
-    record_and_create(file_name, spec)?;
+    println!("Start recording");
+    record_and_create_file(file_name, spec, &button)?;
+    println!("Finish recording");
     Ok(())
 }
 

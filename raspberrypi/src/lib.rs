@@ -1,6 +1,6 @@
 use anyhow::{Ok, Result};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{FromSample, Sample};
+use cpal::{FromSample, Sample, Stream};
 use reqwest::Response;
 use rumqttc::{self, Key, QoS, TlsConfiguration, Transport};
 use rumqttc::{AsyncClient, MqttOptions};
@@ -12,7 +12,11 @@ use std::time::Duration;
 use tokio::{task, time};
 use yup_oauth2::{read_service_account_key, AccessToken, ServiceAccountAuthenticator};
 
-pub fn record_and_create(file_name: &str, spec: hound::WavSpec) -> Result<()> {
+pub fn record_and_create_file(
+    file_name: &str,
+    spec: hound::WavSpec,
+    button: &InputPin,
+) -> Result<()> {
     let host = cpal::default_host();
 
     let device = host
@@ -29,8 +33,6 @@ pub fn record_and_create(file_name: &str, spec: hound::WavSpec) -> Result<()> {
     let writer = hound::WavWriter::create(path, spec)?;
     let writer = Arc::new(Mutex::new(Some(writer)));
 
-    println!("Begin recording...");
-
     let writer_2 = writer.clone();
 
     let err_fn = move |err| {
@@ -46,10 +48,14 @@ pub fn record_and_create(file_name: &str, spec: hound::WavSpec) -> Result<()> {
 
     stream.play()?;
 
-    std::thread::sleep(std::time::Duration::from_secs(3));
+    // ここでボタンの状態を確認し続ける
+    while button.is_high() {
+        // ボタンが押されている間は何もしない
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+
     drop(stream);
     writer.lock().unwrap().take().unwrap().finalize()?;
-    println!("Recording stopped.");
     Ok(())
 }
 
