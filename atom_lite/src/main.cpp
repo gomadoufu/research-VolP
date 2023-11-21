@@ -3,6 +3,7 @@
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
+#include "ATOM_PRINTER.h"
 #define emptyString String()
 
 // Follow instructions from
@@ -18,14 +19,57 @@ PubSubClient client(net);
 
 unsigned long lastMillis = 0;
 
+ATOM_PRINTER printer;
+
+CRGB dispColor(uint8_t r, uint8_t g, uint8_t b) {
+  return (CRGB)((r << 16) | (g << 8) | b);
+}
+
+void volp_print(const char* status) {
+
+  Serial.println("Printing QR Code:");
+  Serial.println(status);
+
+  printer.init();
+  printer.newLine(5);
+  printer.init();
+  printer.printQRCode(status);
+  printer.init();
+  printer.newLine(1);
+  printer.init();
+  printer.printASCII("Message Received!");
+  printer.init();
+  printer.newLine(5);
+
+  delay(2000);
+}
+
+
 void messageReceived(char *topic, byte *payload, unsigned int length) {
-  Serial.print("Received [");
-  Serial.print(topic);
-  Serial.print("]: ");
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
+  Serial.println("Message arrived");
+  M5.dis.drawpix(0, dispColor(0, 255, 0));
+
+  // Convert byte* payload to String
+  String payload_str = String((char *)payload).substring(0, length);
+
+  // Deserialize JSON
+  DynamicJsonDocument jsonDoc(128);
+  DeserializationError error = deserializeJson(jsonDoc, payload_str);
+
+  if (error) {
+    // If there's an error in parsing, display it on the screen
+    Serial.println("Failed to parse JSON");
+    M5.dis.drawpix(0, 0xffff00);
+    Serial.println(error.c_str());
+    return;
   }
-  Serial.println();
+  // Read 'status' from JSON
+  const char *status = jsonDoc["link"];
+
+  // ここでstatusにQRコードのURLが入っている
+  volp_print(status);
+
+  M5.dis.drawpix(0, dispColor(255, 255, 0));
 }
 
 void pubSubErr(int8_t MQTTErr) {
@@ -53,12 +97,14 @@ void pubSubErr(int8_t MQTTErr) {
 
 void connectToMqtt(bool nonBlocking = false) {
   Serial.print("MQTT connecting ");
+  M5.dis.drawpix(0, dispColor(255, 255, 0));
   while (!client.connected()) {
     if (client.connect(THINGNAME)) {
       Serial.println("connected!");
       if (!client.subscribe(MQTT_SUB_TOPIC))
         pubSubErr(client.state());
     } else {
+      M5.dis.drawpix(0, dispColor(255, 0, 0));
       Serial.print("failed, reason -> ");
       pubSubErr(client.state());
       if (!nonBlocking) {
@@ -78,6 +124,9 @@ void connectToWiFi(String init_str) {
     Serial.print(init_str);
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
+    M5.dis.drawpix(0, dispColor(0, 0, 255));
+    delay(1000);
+    M5.dis.drawpix(0, dispColor(0, 0, 0));
     delay(1000);
   }
   if (init_str != emptyString)
@@ -109,7 +158,10 @@ void checkWiFiThenReboot(void) {
 void setup() {
   M5.begin(true, false, true);
   Serial.begin(115200);
+  printer.begin();
+  printer.init();
   delay(5000);
+
   Serial.println();
   Serial.println();
   WiFi.setHostname(THINGNAME);
