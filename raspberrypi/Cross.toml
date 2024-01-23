@@ -1,4 +1,9 @@
 [target.armv7-unknown-linux-gnueabihf]
 pre-build = [
-    "apt-get update && apt-get install --assume-yes pkg-config && apt-get install --assume-yes libasound2-dev",
+    "dpkg --add-architecture armhf && apt-get update && apt-get install --assume-yes libasound2-dev:armhf",
+]
+
+[target.aarch64-unknown-linux-gnu]
+pre-build = [
+    "dpkg --add-architecture arm64 && apt-get update && apt-get install --assume-yes libasound2-dev:arm64",
 ]
