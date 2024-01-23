@@ -1,36 +1,51 @@
 use anyhow::{Ok, Result};
 use chrono::Local;
 use reqwest::Response;
+use rppal::gpio::{Gpio, InputPin};
 use volp_raspberrypi::{
-    gcp_auth, mqtt_pub, record_and_create, share_file, upload_file, RequiredFields, SharedLink,
+    gcp_auth, mqtt_pub, record_and_create_file, share_file, upload_file, RequiredFields, SharedLink,
 };
+
+const GPIO_BUTTON: u8 = 22;
+const GPIO_LED: u8 = 24;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // 今の時間を取得して、ファイル名にする
-    let now = Local::now();
-    let file_name: String = now.format("%Y-%m-%d-%H-%M-%S.wav").to_string();
+    loop {
+        let button = Gpio::new()?.get(GPIO_BUTTON)?.into_input_pulldown();
+        let mut led = Gpio::new()?.get(GPIO_LED)?.into_output();
 
-    // 録音して、ファイルを作成する
-    record(file_name.as_str())?;
+        led.set_low();
 
-    // ファイルをアップロードする
-    let response: Response = upload(file_name.as_str()).await?;
+        if button.is_low() {
+            continue;
+        }
 
-    println!("{:#?}", response);
+        led.set_high();
 
-    // 共有リンクを取得する
-    let shared_link: SharedLink = share_file(response).await?;
+        // 今の時間を取得して、ファイル名にする
+        let now = Local::now();
+        let file_name: String = now.format("%Y-%m-%d-%H-%M-%S.wav").to_string();
 
-    println!("Shared link: {}", shared_link);
+        // 録音して、ファイルを作成する
+        record(file_name.as_str(), &button)?;
 
-    // MQTTで共有リンクを送信する
-    mqtt_pub(shared_link).await?;
+        // ファイルをアップロードする
+        let response: Response = upload(file_name.as_str()).await?;
 
-    Ok(())
+        println!("{:#?}", response);
+
+        // 共有リンクを取得する
+        let shared_link: SharedLink = share_file(response).await?;
+
+        println!("Shared link: {}", shared_link);
+
+        // MQTTで共有リンクを送信する
+        mqtt_pub(shared_link).await?;
+    }
 }
 
-fn record(file_name: &str) -> Result<()> {
+fn record(file_name: &str, button: &InputPin) -> Result<()> {
     // 出力するWAVファイルの設定
     // Int16じゃないと、Drive側で再生できない
     // 入力は自動で設定される
@@ -41,7 +56,9 @@ fn record(file_name: &str) -> Result<()> {
         sample_format: hound::SampleFormat::Int,
     };
 
-    record_and_create(file_name, spec)?;
+    println!("Start recording");
+    record_and_create_file(file_name, spec, &button)?;
+    println!("Finish recording");
     Ok(())
 }
 

@@ -16,6 +16,7 @@ reqwest = { version = "0.11.2", default-features = false, features = [
     "multipart",
     "rustls-tls",
 ] }
+rppal = "0.17.1"
 rumqttc = { version = "0.23.0", default-features = false, features = [
     "use-rustls",
 ] }
