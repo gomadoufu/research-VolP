@@ -170,7 +170,10 @@ pub async fn share_file(response: Response) -> Result<SharedLink> {
         .ok_or_else(|| anyhow::anyhow!("Failed to convert &Value(file id) into &str"))?
         .trim_matches('"');
 
-    let shared_link = format!("https://drive.google.com/uc?id={}", file_id);
+    let shared_link = format!(
+        "https://drive.google.com/file/d/{}/view?usp=sharing",
+        file_id
+    );
     Ok(shared_link)
 }
 
