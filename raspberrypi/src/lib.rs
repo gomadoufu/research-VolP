@@ -39,7 +39,7 @@ pub fn record_and_create_file(
         I16,
     );
 
-    let path = format!("./sound/{}", file_name);
+    let path = format!("/home/alarm/sound/{}", file_name);
 
     let writer = hound::WavWriter::create(path, spec)?;
     let writer = Arc::new(Mutex::new(Some(writer)));
@@ -112,7 +112,7 @@ impl RequiredFields {
 }
 
 pub async fn gcp_auth() -> Result<AccessToken> {
-    let creds = read_service_account_key("./auth/service_account.json").await?;
+    let creds = read_service_account_key("/home/alarm/auth/service_account.json").await?;
     let auth = ServiceAccountAuthenticator::builder(creds).build().await?;
 
     let scopes = &["https://www.googleapis.com/auth/drive.file"];
@@ -130,7 +130,7 @@ pub async fn upload_file(required_fields: RequiredFields, token: AccessToken) ->
         }
     );
 
-    let file_path = format!("./sound/{}", required_fields.file_name);
+    let file_path = format!("/home/alarm/sound/{}", required_fields.file_name);
 
     let form = reqwest::multipart::Form::new()
         .part(
