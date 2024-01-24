@@ -39,7 +39,7 @@ void volp_print(const char *status) {
     printer.init();
     printer.printASCII("Message Received!");
     printer.init();
-    printer.newLine(10);
+    printer.newLine(5);
 
     delay(2000);
 }
@@ -58,7 +58,7 @@ void messageReceived(char *topic, byte *payload, unsigned int length) {
     if (error) {
         // If there's an error in parsing, display it on the screen
         Serial.println("Failed to parse JSON");
-        M5.dis.drawpix(0, 0xffff00);
+        M5.dis.drawpix(0, dispColor(255, 0, 0));
         Serial.println(error.c_str());
         return;
     }
@@ -114,7 +114,6 @@ void connectToMqtt(bool nonBlocking = false) {
         }
         if (nonBlocking) break;
     }
-    M5.dis.drawpix(0, dispColor(0, 255, 0));
 }
 
 void connectToWiFi(String init_str) {
@@ -182,6 +181,7 @@ void loop() {
         // checkWiFiThenMQTTNonBlocking();
         // checkWiFiThenReboot();
     } else {
+        M5.dis.drawpix(0, dispColor(0, 255, 0));
         client.loop();
         if (millis() - lastMillis > 5000) {
             lastMillis = millis();
